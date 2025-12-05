@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Foodie Place — Cart & Orders</title>
+<style>
+    :root{
+        --green: #0aa000;
+        --dark-green: #0a7a00;
+        --card-bg: #fff;
+        --page-bg: #f5f5f5;
+        --muted: #666;
+    }
+    *{box-sizing: border-box}
+    body{
+        margin:0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: var(--page-bg);
+        color:#222;
+    }
+
+    /* Header / Navbar */
+    .header{
+        background: rgb(0,255,0);
+        padding: 18px 12px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+    .nav{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        background: var(--green);
+        padding: 10px 18px;
+        color:#fff;
+    }
+    .nav .links{
+        display:flex;
+        gap:18px;
+        align-items:center;
+    }
+    .nav a{
+        color:#fff;
+        text-decoration:none;
+        font-weight:700;
+        font-size:16px;
+    }
+    .cart-button{
+        background:transparent;
+        border:none;
+        color:#fff;
+        font-weight:700;
+        cursor:pointer;
+        position:relative;
+        padding:6px 10px;
+        font-size:16px;
+    }
+    .cart-badge{
+        position:absolute;
+        top:-6px;
+        right:-6px;
+        background:darkred;
+        color:#fff;
+        width:20px;
+        height:20px;
+        border-radius:50%;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        font-size:12px;
+    }
+
+    /* Page container */
+    .container{
+        max-width:1120px;
+        margin: 28px auto;
+        padding: 0 12px;
+    }
+
+    /* Food grid */
+    .food-grid{
+        display:grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+    }
+    .food-card{
+        background: var(--card-bg);
+        border-radius: 10px;
+        padding: 10px;
+        text-align:center;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .food-card img{
+        width:100%;
+        height: 200px;
+        object-fit:cover;
+        border-radius:8px;
+    }
+    .food-card h3{
+        margin:12px 0 6px;
+    }
+    .food-card p{
+        color:var(--muted);
+        margin:0 0 10px;
+    }
+    .btn-order{
+        background:var(--green);
+        color:#fff;
+        border: none;
+        padding:8px 18px;
+        border-radius:6px;
+        cursor:pointer;
+        font-weight:700;
+    }
+    .btn-order:active{transform:translateY(1px)}
+
+    /* Cart and Orders sections */
+    .hidden{display:none}
+
+    /* Cart details */
+    .cart-panel{
+        background:var(--card-bg);
+        padding:14px;
+        border-radius:10px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .cart-item{
+        display:flex;
+        gap:12px;
+        padding:12px 0;
+        border-bottom:1px solid #eee;
+        align-items:center;
+    }
+    .cart-item img{width:80px;height:60px;object-fit:cover;border-radius:6px}
+    .qty-control{display:flex;gap:8px;align-items:center}
+    .qty-control button{
+        padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer
+    }
+    .muted{color:var(--muted)}
+    .checkout-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+
+    /* Orders history */
+    .order-card{
+        background:#fff;padding:12px;border-radius:8px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,0.04)
+    }
+
+    /* Responsive */
+    @media (max-width:900px){
+        .food-grid{grid-template-columns: repeat(2, 1fr)}
+    }
+    @media (max-width:600px){
+        .food-grid{grid-template-columns: 1fr}
+        .nav{flex-direction:column;gap:8px;align-items:flex-start}
+        .header{font-size:26px}
+    }
+
+    /* small toast */
+    #toast{
+        position:fixed;right:18px;bottom:18px;background:#222;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:all .25s
+    }
+    #toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="header">Foodie Place</div>
+
+<nav class="nav">
+    <div class="links">
+        <a href="#" data-nav="home" class="nav-link">Home</a>
+        <a href="#" data-nav="orders" class="nav-link">Orders</a>
+        <a href="#" data-nav="about" class="nav-link">About</a>
+    </div>
+
+    <div>
+        <button class="cart-button" id="open-cart">
+            🛒 Cart
+            <span class="cart-badge" id="cart-badge">0</span>
+        </button>
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- HOME -->
+    <section id="home" class="page-section">
+        <div style="text-align:center;margin-bottom:18px">
+            <h2 style="margin:6px 0 2px">Our Menu</h2>
+            <p class="muted">Tap Order to add item to cart</p>
+        </div>
+
+        <div class="food-grid" id="food-grid">
+            <!-- cards will be rendered by JavaScript -->
+        </div>
+    </section>
+
+    <!-- CART (hidden by default) -->
+    <section id="cart" class="page-section hidden" style="margin-top:16px">
+        <h2>Your Cart</h2>
+        <div id="cart-contents" class="cart-panel" style="margin-top:10px">
+            <!-- items rendered by JS -->
+            <p class="muted" id="empty-cart-msg">Your cart is empty.</p>
+        </div>
+    </section>
+
+    <!-- ORDERS PAGE -->
+    <section id="orders" class="page-section hidden" style="margin-top:16px">
+        <h2>Order History</h2>
+        <div id="orders-list" style="margin-top:12px">
+            <!-- orders rendered here -->
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="page-section hidden" style="margin-top:16px">
+        <h2>About Foodie Place</h2>
+        <p class="muted">This is a demo project showing a simple front-end ordering flow with cart and order history using localStorage.</p>
+    </section>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ---------- Sample data for menu (images hosted publicly) ---------- */
+const MENU = [
+    { id: 'pizza', title: 'Pizza', price: 249,img:"Chickenpizza.jpg"},
+    { id: 'pizza-veg', title: 'Pizza Veg', price: 219, img: 'vegpizza.jpg' },
+    { id: 'burger', title: 'Burger', price: 129, img: 'Burger.jpg' },
+    { id: 'pasta', title: 'Pasta', price: 179, img: 'Pasta.jpg' },
+    { id: 'noodles', title: 'Noodles', price: 149, img: 'Noodles.jpg' },
+    { id: 'mac', title: 'Mac & Cheese', price: 189, img: 'Mac.jpg' }
+];
+
+/* ---------- localStorage keys ---------- */
+const CART_KEY = 'food_cart_v1';
+const ORDERS_KEY = 'food_orders_v1';
+
+/* ---------- Helpers ---------- */
+function readStorage(key){ try{ return JSON.parse(localStorage.getItem(key)) || null } catch(e){ return null } }
+function writeStorage(key, value){ localStorage.setItem(key, JSON.stringify(value)) }
+
+/* ---------- Render menu ---------- */
+const grid = document.getElementById('food-grid');
+function renderMenu(){
+    grid.innerHTML = '';
+    MENU.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'food-card';
+        card.innerHTML = `
+            <img src="${item.img}" alt="${item.title}">
+            <h3>${item.title}</h3>
+            <p class="muted">₹ ${item.price} — Delicious!</p>
+            <button class="btn-order" data-id="${item.id}">Order</button>
+        `;
+        grid.appendChild(card);
+    });
+}
+renderMenu();
+
+/* ---------- Cart logic ---------- */
+function getCart(){ return readStorage(CART_KEY) || {} } // {id: qty}
+function saveCart(cart){ writeStorage(CART_KEY, cart); updateCartBadge(); }
+
+function addToCart(itemId, qty = 1){
+    const cart = getCart();
+    cart[itemId] = (cart[itemId] || 0) + qty;
+    saveCart(cart);
+    showToast('Added to cart');
+}
+
+function removeFromCart(itemId){
+    const cart = getCart();
+    if(cart[itemId]) delete cart[itemId];
+    saveCart(cart);
+}
+
+function updateQty(itemId, newQty){
+    const cart = getCart();
+    if(newQty <= 0) delete cart[itemId];
+    else cart[itemId] = newQty;
+    saveCart(cart);
+}
+
+function clearCart(){ writeStorage(CART_KEY, {}); updateCartBadge(); }
+
+/* ---------- Orders logic ---------- */
+function getOrders(){ return readStorage(ORDERS_KEY) || [] }
+function saveOrderRecord(orderRecord){
+    const arr = getOrders();
+    arr.unshift(orderRecord); // newest first
+    writeStorage(ORDERS_KEY, arr);
+}
+
+/* ---------- Update cart badge ---------- */
+function updateCartBadge(){
+    const badge = document.getElementById('cart-badge');
+    const cart = getCart();
+    let total = 0;
+    for(const k in cart) total += cart[k];
+    badge.textContent = total;
+}
+
+/* ---------- Render cart contents ---------- */
+function renderCart(){
+    const container = document.getElementById('cart-contents');
+    const cart = getCart();
+    container.innerHTML = '';
+    const keys = Object.keys(cart);
+    if(keys.length === 0){
+        container.innerHTML = '<p class="muted" id="empty-cart-msg">Your cart is empty.</p>';
+        return;
+    }
+
+    // Items list
+    keys.forEach(id => {
+        const menuItem = MENU.find(m=>m.id===id);
+        const qty = cart[id];
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+            <img src="${menuItem.img}" alt="${menuItem.title}">
+            <div style="flex:1;text-align:left">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <strong>${menuItem.title}</strong>
+                        <div class="muted">₹ ${menuItem.price} each</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div>₹ <span class="item-subtotal">${menuItem.price * qty}</span></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px;display:flex;align-items:center;gap:12px">
+                    <div class="qty-control">
+                        <button class="dec" data-id="${id}">-</button>
+                        <div style="min-width:28px;text-align:center">${qty}</div>
+                        <button class="inc" data-id="${id}">+</button>
+                    </div>
+                    <button class="remove muted" data-id="${id}" style="background:#f8f8f8;border:1px solid #eee;padding:6px 10px;border-radius:6px;cursor:pointer">Remove</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+
+    // total + checkout
+    const total = keys.reduce((s, id)=> {
+        const menuItem = MENU.find(m=>m.id===id);
+        return s + menuItem.price * cart[id];
+    }, 0);
+
+    const footer = document.createElement('div');
+    footer.className = 'checkout-row';
+    footer.innerHTML = `
+        <div style="font-weight:700">Total: ₹ ${total}</div>
+        <div>
+            <button id="checkout-btn" class="btn-order" style="background:var(--dark-green)">Checkout</button>
+            <button id="clear-cart" style="margin-left:8px;padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Clear</button>
+        </div>
+    `;
+    container.appendChild(footer);
+
+    // attach buttons
+    container.querySelectorAll('.inc').forEach(b=>{
+        b.addEventListener('click', ()=> {
+            const id = b.dataset.id;
+            updateQty(id, getCart()[id] + 1);
+            renderCart();
+        });
+    });
+    container.querySelectorAll('.dec').forEach(b=>{
+        b.addEventListener('click', ()=> {
+            const id = b.dataset.id;
+            updateQty(id, getCart()[id] - 1);
+            renderCart();
+        });
+    });
+    container.querySelectorAll('.remove').forEach(b=>{
+        b.addEventListener('click', ()=>{
+            removeFromCart(b.dataset.id);
+            renderCart();
+        });
+    });
+
+    document.getElementById('checkout-btn').addEventListener('click', ()=> {
+        const order = {
+            id: 'ord_' + Date.now(),
+            createdAt: new Date().toISOString(),
+            items: keys.map(id => {
+                const m = MENU.find(x=>x.id===id);
+                return { id: m.id, title: m.title, price: m.price, qty: cart[id] };
+            }),
+            total: total
+        };
+        saveOrderRecord(order);
+        clearCart();
+        renderCart();
+        showToast('Checkout successful — order placed');
+        showSection('orders'); // go to orders page
+        renderOrders();
+    });
+
+    document.getElementById('clear-cart').addEventListener('click', ()=> {
+        if(confirm('Clear entire cart?')){
+            clearCart();
+            renderCart();
+        }
+    });
+}
+
+/* ---------- Render orders ---------- */
+function renderOrders(){
+    const list = document.getElementById('orders-list');
+    const orders = getOrders();
+    list.innerHTML = '';
+    if(orders.length === 0){
+        list.innerHTML = '<p class="muted">You have not placed any orders yet.</p>';
+        return;
+    }
+    orders.forEach(order => {
+        const card = document.createElement('div');
+        card.className = 'order-card';
+        card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <div style="font-weight:800">Order #${order.id}</div>
+                    <div class="muted" style="font-size:13px">${new Date(order.createdAt).toLocaleString()}</div>
+                </div>
+                <div style="font-weight:700">₹ ${order.total}</div>
+            </div>
+            <div style="margin-top:10px">
+                ${order.items.map(it => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed #eee">
+                    <div>${it.title} × ${it.qty}</div>
+                    <div>₹ ${it.price * it.qty}</div>
+                </div>`).join('')}
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null;
+function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+/* ---------- Navigation / events ---------- */
+function showSection(name){
+    document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
+    const el = document.getElementById(name);
+    if(el) el.classList.remove('hidden');
+    // highlight nav links visually if desired (skipped)
+}
+
+document.querySelectorAll('.nav-link').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const target = a.dataset.nav;
+        showSection(target);
+        if(target === 'orders') renderOrders();
+    });
+});
+
+document.getElementById('open-cart').addEventListener('click', ()=> {
+    // toggle cart section visibility
+    const cartSection = document.getElementById('cart');
+    // show cart and hide others
+    showSection('cart');
+    renderCart();
+});
+
+/* Attach order buttons from menu */
+document.addEventListener('click', function(e){
+    const orderBtn = e.target.closest('.btn-order');
+    if(!orderBtn) return;
+    const id = orderBtn.dataset.id;
+    if(!id) return;
+    addToCart(id, 1);
+});
+
+/* initialize UI */
+updateCartBadge();
+renderCart();
+renderOrders();
+showSection('home');
+
+/* Expose functions for console debugging (optional) */
+window._MENU = MENU;
+window._getCart = getCart;
+window._getOrders = getOrders;
+</script>
+
+</body>
+</html>
